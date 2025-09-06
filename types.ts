@@ -1,43 +1,4 @@
-
-export type UserRole = 'Admin' | 'Employee';
-export type Status = 'Active' | 'Inactive';
-
-export interface Address {
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-}
-
-export interface EmploymentHistory {
-  company: string;
-  position: string;
-  startDate: string;
-  endDate: string;
-}
-
-export interface Contract {
-  type: 'Full-Time' | 'Part-Time' | 'Contract';
-  startDate: string;
-  endDate?: string | null;
-}
-
-export interface Performance {
-  lastReview: string;
-  achievements: string[];
-  areasForImprovement: string[];
-}
-
-export interface LeaveCredits {
-  vacation: number;
-  sick: number;
-  personal: number;
-}
-
-export interface HealthCareBenefit {
-  allowance: number;
-  balance: number;
-}
+// FIX: Create new file `types.ts` to define all data structures.
 
 export interface Employee {
   id: number;
@@ -47,15 +8,40 @@ export interface Employee {
   email: string;
   password?: string;
   avatar: string;
-  status: Status;
+  status: 'Active' | 'Inactive';
   gender: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
   supervisorId: number | null;
-  address: Address;
-  employmentHistory: EmploymentHistory[];
-  contracts: Contract[];
-  performance: Performance;
-  leaveCredits: LeaveCredits;
-  healthCareBenefit: HealthCareBenefit;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+  employmentHistory: {
+    company: string;
+    position: string;
+    startDate: string;
+    endDate: string;
+  }[];
+  contracts: {
+    type: 'Full-Time' | 'Part-Time' | 'Contract';
+    startDate: string;
+    endDate: string | null;
+  }[];
+  performance: {
+    lastReview: string;
+    achievements: string[];
+    areasForImprovement: string[];
+  };
+  leaveCredits: {
+    vacation: number;
+    sick: number;
+    personal: number;
+  };
+  healthCareBenefit: {
+    allowance: number;
+    balance: number;
+  };
   accessibleModules: string[];
   assignedBiometricNumber: number | null;
 }
@@ -77,18 +63,6 @@ export interface OnboardingPlan {
   progress: number;
 }
 
-export interface GeneratedOnboardingPlan {
-    plan: {
-        week: number;
-        title: string;
-        tasks: {
-            task: string;
-            completed: boolean;
-        }[];
-    }[];
-}
-
-
 export interface PerformanceReview {
   id: number;
   employeeId: number;
@@ -105,7 +79,7 @@ export interface LeaveRequest {
   startDate: string;
   endDate: string;
   reason: string;
-  status: 'Pending' | 'Approved by Supervisor' | 'Approved' | 'Rejected';
+  status: 'Pending' | 'Approved' | 'Rejected';
 }
 
 export interface TimeRecord {
@@ -114,26 +88,26 @@ export interface TimeRecord {
   employeeName: string;
   date: string;
   timeIn: string;
-  clockInDevice: string | null;
+  clockInDevice: string;
   timeOut: string | null;
   clockOutDevice: string | null;
-  totalHours: number | null;
+  totalHours: number;
   status: 'On Time' | 'Late' | 'Absent';
 }
 
 export interface EmployeeSchedule {
-  id: number;
-  employeeId: number;
-  employeeName: string;
-  monday: string;
-  tuesday: string;
-  wednesday: string;
-  thursday: string;
-  friday: string;
-  saturday: string;
-  sunday: string;
-  effectiveDate: string;
-  endDate: string | null;
+    id: number;
+    employeeId: number;
+    employeeName: string;
+    monday: string;
+    tuesday: string;
+    wednesday: string;
+    thursday: string;
+    friday: string;
+    saturday: string;
+    sunday: string;
+    effectiveDate: string;
+    endDate: string | null;
 }
 
 export interface OvertimeRequest {
@@ -145,7 +119,14 @@ export interface OvertimeRequest {
     endTime: string;
     hours: number;
     reason: string;
-    status: 'Pending' | 'Approved by Supervisor' | 'Approved' | 'Rejected';
+    status: 'Pending' | 'Approved' | 'Rejected';
+}
+
+export interface Memo {
+    id: number;
+    title: string;
+    content: string;
+    date: string;
 }
 
 export interface BiometricDevice {
@@ -165,16 +146,14 @@ export interface BiometricLog {
     deviceInfo: string;
 }
 
-export interface Memo {
-  id: number;
-  title: string;
-  content: string;
-  date: string;
-}
-
-export interface ChatMessage {
-  sender: 'user' | 'ai';
-  text: string;
+export interface HealthCareClaim {
+    id: number;
+    employeeId: number;
+    employeeName: string;
+    date: string;
+    type: string;
+    amount: number;
+    status: 'Pending' | 'Approved' | 'Rejected';
 }
 
 export interface Holiday {
@@ -184,19 +163,28 @@ export interface Holiday {
 }
 
 export interface HRSettings {
-    defaultLeaveCredits: LeaveCredits;
+    defaultLeaveCredits: {
+        vacation: number;
+        sick: number;
+        personal: number;
+    };
     healthCareAllowance: number;
     twoStepApproval: boolean;
     holidays: Holiday[];
 }
 
-export interface HealthCareClaim {
-    id: number;
-    employeeId: number;
-    employeeName: string;
-    date: string;
-    type: string;
-    amount: number;
-    status: 'Pending' | 'Approved' | 'Rejected';
-    receiptUrl?: string;
+export interface ChatMessage {
+  sender: 'user' | 'ai';
+  text: string;
+}
+
+export interface GeneratedOnboardingPlan {
+    plan: {
+        week: number;
+        title: string;
+        tasks: {
+            task: string;
+            completed: boolean;
+        }[];
+    }[];
 }

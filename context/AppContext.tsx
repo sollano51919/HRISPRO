@@ -1,91 +1,88 @@
+// FIX: Create new file `context/AppContext.tsx` to provide global state management.
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import * as types from '../types';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import * as storage from '../services/storageService';
 import { initialData } from '../data/initialData';
+import { Employee, JobPosting, OnboardingPlan, PerformanceReview, LeaveRequest, TimeRecord, EmployeeSchedule, OvertimeRequest, Memo, BiometricDevice, BiometricLog, HealthCareClaim, HRSettings } from '../types';
 
 interface AppContextType {
     isAuthenticated: boolean;
-    currentUser: types.Employee | null;
-    userRole: types.UserRole | null;
+    currentUser: Employee | null;
+    userRole: 'Admin' | 'Employee';
+    employees: Employee[];
+    jobPostings: JobPosting[];
+    onboardingPlans: OnboardingPlan[];
+    performanceReviews: PerformanceReview[];
+    leaveRequests: LeaveRequest[];
+    timeRecords: TimeRecord[];
+    schedules: EmployeeSchedule[];
+    overtimeRequests: OvertimeRequest[];
+    memos: Memo[];
+    biometricDevices: BiometricDevice[];
+    biometricLogs: BiometricLog[];
+    healthCareClaims: HealthCareClaim[];
+    settings: HRSettings;
+    activeModule: string;
+    viewingEmployeeId: number | null;
+    activeSubModule: string | null;
+    
     login: (userId: number) => void;
     logout: () => void;
-    activeModule: string;
     setActiveModule: (module: string) => void;
-    activeSubModule: string | null;
-    setActiveSubModule: (subModule: string) => void;
+    setViewingEmployeeId: (id: number | null) => void;
     clearSubModule: () => void;
     
-    employees: types.Employee[];
-    addEmployee: (employee: Omit<types.Employee, 'id'>) => void;
-    updateEmployee: (employee: types.Employee) => void;
-
-    viewingEmployeeId: number | null;
-    setViewingEmployeeId: (id: number | null) => void;
-
-    jobPostings: types.JobPosting[];
-    onboardingPlans: types.OnboardingPlan[];
-    performanceReviews: types.PerformanceReview[];
-
-    leaveRequests: types.LeaveRequest[];
-    addLeaveRequest: (request: Omit<types.LeaveRequest, 'id' | 'status'>) => Promise<string|null>;
-    updateLeaveRequestStatus: (id: number, status: types.LeaveRequest['status']) => void;
-
-    timeRecords: types.TimeRecord[];
-    schedules: types.EmployeeSchedule[];
-    addSchedule: (schedule: Omit<types.EmployeeSchedule, 'id'>) => void;
-    updateSchedule: (schedule: types.EmployeeSchedule) => void;
-
-    overtimeRequests: types.OvertimeRequest[];
-    addOvertimeRequest: (request: Omit<types.OvertimeRequest, 'id' | 'status' | 'hours'>) => Promise<string|null>;
-    updateOvertimeRequestStatus: (id: number, status: types.OvertimeRequest['status']) => void;
-
-    memos: types.Memo[];
-    addMemo: (memo: Omit<types.Memo, 'id'>) => void;
-    updateMemo: (memo: types.Memo) => void;
-    deleteMemo: (id: number) => void;
+    addEmployee: (employeeData: Omit<Employee, 'id'>) => void;
+    updateEmployee: (employeeData: Employee) => void;
     
-    biometricDevices: types.BiometricDevice[];
-    addBiometricDevice: (device: Omit<types.BiometricDevice, 'id'>) => void;
-    updateBiometricDevice: (device: types.BiometricDevice) => void;
-    deleteBiometricDevice: (id: number) => void;
+    addMemo: (memo: Omit<Memo, 'id'>) => void;
+    updateMemo: (memo: Memo) => void;
+    deleteMemo: (id: number) => void;
 
-    biometricLogs: types.BiometricLog[];
-    syncBiometricData: () => Promise<{newLogsCount: number}>;
+    addLeaveRequest: (request: Omit<LeaveRequest, 'id'>) => void;
+    updateLeaveRequest: (request: LeaveRequest) => void;
 
-    healthCareClaims: types.HealthCareClaim[];
-    addHealthCareClaim: (claim: Omit<types.HealthCareClaim, 'id'|'status'|'employeeName'>) => Promise<string|null>;
-    updateHealthCareClaimStatus: (id: number, status: types.HealthCareClaim['status']) => void;
+    addSchedule: (schedule: Omit<EmployeeSchedule, 'id'>) => void;
+    
+    addOvertimeRequest: (request: Omit<OvertimeRequest, 'id'>) => void;
+    updateOvertimeRequest: (request: OvertimeRequest) => void;
 
-    settings: types.HRSettings;
-    updateSettings: (settings: types.HRSettings, propagate?: { leave?: boolean; health?: boolean }) => void;
+    addHealthCareClaim: (claim: Omit<HealthCareClaim, 'id'>) => Promise<void>;
+    updateHealthCareClaim: (claim: HealthCareClaim) => void;
+
+    updateSettings: (newSettings: HRSettings, propagate?: { leave?: boolean; health?: boolean; }) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [employees, setEmployees] = useState<types.Employee[]>(() => storage.getEmployees(initialData.employees));
-    const [jobPostings, setJobPostings] = useState<types.JobPosting[]>(() => storage.getJobPostings(initialData.jobPostings));
-    const [onboardingPlans, setOnboardingPlans] = useState<types.OnboardingPlan[]>(() => storage.getOnboardingPlans(initialData.onboardingPlans));
-    const [performanceReviews, setPerformanceReviews] = useState<types.PerformanceReview[]>(() => storage.getPerformanceReviews(initialData.performanceReviews));
-    const [leaveRequests, setLeaveRequests] = useState<types.LeaveRequest[]>(() => storage.getLeaveRequests(initialData.leaveRequests));
-    const [timeRecords, setTimeRecords] = useState<types.TimeRecord[]>(() => storage.getTimeRecords(initialData.timeRecords));
-    const [schedules, setSchedules] = useState<types.EmployeeSchedule[]>(() => storage.getSchedules(initialData.schedules));
-    const [overtimeRequests, setOvertimeRequests] = useState<types.OvertimeRequest[]>(() => storage.getOvertimeRequests(initialData.overtimeRequests));
-    const [memos, setMemos] = useState<types.Memo[]>(() => storage.getMemos(initialData.memos));
-    const [biometricDevices, setBiometricDevices] = useState<types.BiometricDevice[]>(() => storage.getBiometricDevices(initialData.biometricDevices));
-    const [biometricLogs, setBiometricLogs] = useState<types.BiometricLog[]>(() => storage.getBiometricLogs(initialData.biometricLogs));
-    const [healthCareClaims, setHealthCareClaims] = useState<types.HealthCareClaim[]>(() => storage.getHealthCareClaims(initialData.healthCareClaims));
-    const [settings, setSettings] = useState<types.HRSettings>(() => storage.getSettings(initialData.settings));
-    
-    const [session, setSession] = useState(storage.getSession());
-    const [activeModule, setActiveModuleState] = useState('dashboard');
-    const [activeSubModule, setActiveSubModuleState] = useState<string | null>(null);
-    const [viewingEmployeeId, setViewingEmployeeIdState] = useState<number | null>(null);
+    // State
+    const [employees, setEmployees] = useState<Employee[]>(() => storage.getEmployees(initialData.employees));
+    const [jobPostings, setJobPostings] = useState<JobPosting[]>(() => storage.getJobPostings(initialData.jobPostings));
+    const [onboardingPlans, setOnboardingPlans] = useState<OnboardingPlan[]>(() => storage.getOnboardingPlans(initialData.onboardingPlans));
+    const [performanceReviews, setPerformanceReviews] = useState<PerformanceReview[]>(() => storage.getPerformanceReviews(initialData.performanceReviews));
+    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(() => storage.getLeaveRequests(initialData.leaveRequests));
+    const [timeRecords, setTimeRecords] = useState<TimeRecord[]>(() => storage.getTimeRecords(initialData.timeRecords));
+    const [schedules, setSchedules] = useState<EmployeeSchedule[]>(() => storage.getSchedules(initialData.schedules));
+    const [overtimeRequests, setOvertimeRequests] = useState<OvertimeRequest[]>(() => storage.getOvertimeRequests(initialData.overtimeRequests));
+    const [memos, setMemos] = useState<Memo[]>(() => storage.getMemos(initialData.memos));
+    const [biometricDevices, setBiometricDevices] = useState<BiometricDevice[]>(() => storage.getBiometricDevices(initialData.biometricDevices));
+    const [biometricLogs, setBiometricLogs] = useState<BiometricLog[]>(() => storage.getBiometricLogs(initialData.biometricLogs));
+    const [healthCareClaims, setHealthCareClaims] = useState<HealthCareClaim[]>(() => storage.getHealthCareClaims(initialData.healthCareClaims));
+    const [settings, setSettings] = useState<HRSettings>(() => storage.getSettings(initialData.settings));
 
-    const currentUser = employees.find(e => e.id === session?.userId) || null;
-    const userRole = currentUser?.email === 'admin@hr-core.com' ? 'Admin' : 'Employee';
-    
+    // Session State
+    const [session, setSession] = useState(storage.getSession());
+    const [activeModule, setActiveModule] = useState('dashboard');
+    const [viewingEmployeeId, setViewingEmployeeId] = useState<number | null>(null);
+    const [activeSubModule, setActiveSubModule] = useState<string | null>(null);
+
+    // Derived State
+    const isAuthenticated = !!session;
+    const currentUser = useMemo(() => employees.find(e => e.id === session?.userId) || null, [employees, session]);
+    const userRole = useMemo(() => (currentUser?.email === 'admin@hr-core.com' ? 'Admin' : 'Employee'), [currentUser]);
+
+    // Effects to persist state
     useEffect(() => { storage.setEmployees(employees); }, [employees]);
     useEffect(() => { storage.setJobPostings(jobPostings); }, [jobPostings]);
     useEffect(() => { storage.setOnboardingPlans(onboardingPlans); }, [onboardingPlans]);
@@ -99,202 +96,90 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     useEffect(() => { storage.setBiometricLogs(biometricLogs); }, [biometricLogs]);
     useEffect(() => { storage.setHealthCareClaims(healthCareClaims); }, [healthCareClaims]);
     useEffect(() => { storage.setSettings(settings); }, [settings]);
+    useEffect(() => { session ? storage.saveSession(session) : storage.clearSession(); }, [session]);
 
-
-    const login = (userId: number) => {
-        const sessionData = { userId };
-        storage.saveSession(sessionData);
-        setSession(sessionData);
-    };
-
+    // Functions
+    const login = (userId: number) => setSession({ userId });
     const logout = () => {
-        storage.clearSession();
-        setSession(null);
-        setActiveModuleState('dashboard');
+      setSession(null);
+      setActiveModule('dashboard');
+      setViewingEmployeeId(null);
     };
-
-    const setActiveModule = (module: string) => {
-        setViewingEmployeeIdState(null);
-        setActiveModuleState(module);
-    };
-
-    const setViewingEmployeeId = (id: number | null) => {
-        setViewingEmployeeIdState(id);
-    };
-
-    const setActiveSubModule = (subModule: string) => {
-        setActiveSubModuleState(subModule);
-    }
-    const clearSubModule = () => setActiveSubModuleState(null);
+    const clearSubModule = () => setActiveSubModule(null);
     
-    const addEmployee = (employee: Omit<types.Employee, 'id'>) => {
-        setEmployees(prev => [...prev, { ...employee, id: Date.now() }]);
+    const addEmployee = (employeeData: Omit<Employee, 'id'>) => {
+        setEmployees(prev => [...prev, { ...employeeData, id: Date.now() }]);
     };
+    const updateEmployee = (employeeData: Employee) => {
+        setEmployees(prev => prev.map(emp => emp.id === employeeData.id ? employeeData : emp));
+    };
+
+    const addMemo = (memo: Omit<Memo, 'id'>) => setMemos(p => [...p, { ...memo, id: Date.now() }]);
+    const updateMemo = (memo: Memo) => setMemos(p => p.map(m => m.id === memo.id ? memo : m));
+    const deleteMemo = (id: number) => setMemos(p => p.filter(m => m.id !== id));
+
+    const addLeaveRequest = (request: Omit<LeaveRequest, 'id'>) => setLeaveRequests(p => [...p, { ...request, id: Date.now() }]);
+    const updateLeaveRequest = (request: LeaveRequest) => setLeaveRequests(p => p.map(lr => lr.id === request.id ? request : lr));
     
-    const updateEmployee = (updatedEmployee: types.Employee) => {
-        setEmployees(prev => prev.map(e => e.id === updatedEmployee.id ? updatedEmployee : e));
-    };
+    const addSchedule = (schedule: Omit<EmployeeSchedule, 'id'>) => setSchedules(p => [...p, { ...schedule, id: Date.now() }]);
     
-    const addLeaveRequest = async (request: Omit<types.LeaveRequest, 'id' | 'status'>): Promise<string|null> => {
-        setLeaveRequests(prev => [...prev, { ...request, id: Date.now(), status: 'Pending' }]);
-        return null;
-    };
-    
-    const updateLeaveRequestStatus = (id: number, status: types.LeaveRequest['status']) => {
-        setLeaveRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
-    };
-    
-    const addSchedule = (schedule: Omit<types.EmployeeSchedule, 'id'>) => {
-        setSchedules(prev => {
-            const now = new Date();
-            now.setDate(now.getDate() - 1);
-            const yesterday = now.toISOString().slice(0, 10);
-            
-            const updated = prev.map(s => {
-                if (s.employeeId === schedule.employeeId && !s.endDate) {
-                    return { ...s, endDate: yesterday };
-                }
-                return s;
-            });
-            return [...updated, { ...schedule, id: Date.now() }];
-        });
-    };
-    
-    const updateSchedule = (updatedSchedule: types.EmployeeSchedule) => {
-        setSchedules(prev => prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s));
+    const addOvertimeRequest = (request: Omit<OvertimeRequest, 'id'>) => setOvertimeRequests(p => [...p, { ...request, id: Date.now() }]);
+    const updateOvertimeRequest = (request: OvertimeRequest) => setOvertimeRequests(p => p.map(or => or.id === request.id ? request : or));
+
+    const addHealthCareClaim = async (claim: Omit<HealthCareClaim, 'id'>) => {
+      if (claim.status === 'Approved') {
+          const employee = employees.find(e => e.id === claim.employeeId);
+          if (employee && employee.healthCareBenefit.balance >= claim.amount) {
+              updateEmployee({ ...employee, healthCareBenefit: { ...employee.healthCareBenefit, balance: employee.healthCareBenefit.balance - claim.amount } });
+          } else {
+              throw new Error("Insufficient balance.");
+          }
+      }
+      setHealthCareClaims(p => [...p, { ...claim, id: Date.now() }]);
     };
 
-    const addOvertimeRequest = async (request: Omit<types.OvertimeRequest, 'id'|'status'|'hours'>): Promise<string|null> => {
-        const start = new Date(`${request.date}T${request.startTime}`);
-        const end = new Date(`${request.date}T${request.endTime}`);
-        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        if (hours <= 0) return "End time must be after start time.";
-        setOvertimeRequests(prev => [...prev, { ...request, id: Date.now(), hours, status: 'Pending' }]);
-        return null;
+    const updateHealthCareClaim = (claim: HealthCareClaim) => {
+      const originalClaim = healthCareClaims.find(c => c.id === claim.id);
+      const employee = employees.find(e => e.id === claim.employeeId);
+      if (!originalClaim || !employee) return;
+
+      let newBalance = employee.healthCareBenefit.balance;
+      // Revert old transaction if it was approved
+      if (originalClaim.status === 'Approved') {
+          newBalance += originalClaim.amount;
+      }
+      // Apply new transaction if it is approved
+      if (claim.status === 'Approved') {
+          newBalance -= claim.amount;
+      }
+      
+      updateEmployee({ ...employee, healthCareBenefit: { ...employee.healthCareBenefit, balance: newBalance } });
+      setHealthCareClaims(p => p.map(c => c.id === claim.id ? claim : c));
     };
 
-    const updateOvertimeRequestStatus = (id: number, status: types.OvertimeRequest['status']) => {
-        setOvertimeRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
-    };
-
-    const addMemo = (memo: Omit<types.Memo, 'id'>) => setMemos(prev => [...prev, { ...memo, id: Date.now() }]);
-    const updateMemo = (memo: types.Memo) => setMemos(prev => prev.map(m => m.id === memo.id ? memo : m));
-    const deleteMemo = (id: number) => setMemos(prev => prev.filter(m => m.id !== id));
-
-    const addBiometricDevice = (device: Omit<types.BiometricDevice, 'id'>) => setBiometricDevices(prev => [...prev, { ...device, id: Date.now() }]);
-    const updateBiometricDevice = (device: types.BiometricDevice) => setBiometricDevices(prev => prev.map(d => d.id === device.id ? device : d));
-    const deleteBiometricDevice = (id: number) => setBiometricDevices(prev => prev.filter(d => d.id !== id));
-
-    const syncBiometricData = async (): Promise<{newLogsCount: number}> => {
-        // Mock sync
-        await new Promise(res => setTimeout(res, 1500));
-        const newLog: types.BiometricLog = {
-            id: Date.now(),
-            employeeName: "John Doe",
-            biometricNumber: 1001,
-            timestamp: new Date().toISOString(),
-            type: 'clock-in',
-            deviceInfo: "Main Entrance (192.168.1.100:8080)"
-        };
-        setBiometricLogs(prev => [...prev, newLog].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-        return { newLogsCount: 1 };
-    }
-
-    const addHealthCareClaim = async (claim: Omit<types.HealthCareClaim, 'id'|'status'|'employeeName'>): Promise<string|null> => {
-        const employee = employees.find(e => e.id === claim.employeeId);
-        if (!employee) return "Employee not found.";
-        if (claim.amount > employee.healthCareBenefit.balance) return "Claim amount exceeds available balance.";
-        
-        setHealthCareClaims(prev => [...prev, { ...claim, id: Date.now(), status: 'Pending', employeeName: employee.name }]);
-        return null;
-    };
-
-    const updateHealthCareClaimStatus = (id: number, status: types.HealthCareClaim['status']) => {
-        setHealthCareClaims(prev => prev.map(c => {
-            if (c.id === id) {
-                if (status === 'Approved') {
-                    setEmployees(empPrev => empPrev.map(e => {
-                        if (e.id === c.employeeId) {
-                            return { ...e, healthCareBenefit: { ...e.healthCareBenefit, balance: e.healthCareBenefit.balance - c.amount } };
-                        }
-                        return e;
-                    }));
-                }
-                return { ...c, status };
-            }
-            return c;
-        }));
-    };
-
-    const updateSettings = (newSettings: types.HRSettings, propagate?: { leave?: boolean; health?: boolean }) => {
+    const updateSettings = (newSettings: HRSettings, propagate: { leave?: boolean; health?: boolean; } = {}) => {
         setSettings(newSettings);
-        if (propagate?.leave || propagate?.health) {
-            setEmployees(prev => prev.map(e => {
-                if (e.status === 'Active') {
-                    let updatedEmployee = { ...e };
-                    if (propagate.leave) {
-                        updatedEmployee.leaveCredits = { ...newSettings.defaultLeaveCredits };
-                    }
-                    if (propagate.health) {
-                        updatedEmployee.healthCareBenefit = { allowance: newSettings.healthCareAllowance, balance: newSettings.healthCareAllowance };
-                    }
-                    return updatedEmployee;
-                }
-                return e;
-            }));
+        if (propagate.leave) {
+            setEmployees(prev => prev.map(emp => emp.status === 'Active' ? { ...emp, leaveCredits: newSettings.defaultLeaveCredits } : emp));
+        }
+        if (propagate.health) {
+             setEmployees(prev => prev.map(emp => emp.status === 'Active' ? { ...emp, healthCareBenefit: { allowance: newSettings.healthCareAllowance, balance: newSettings.healthCareAllowance } } : emp));
         }
     };
 
     const value: AppContextType = {
-        isAuthenticated: !!session,
-        currentUser,
-        userRole,
-        login,
-        logout,
-        activeModule,
-        setActiveModule,
-        activeSubModule,
-        setActiveSubModule,
-        clearSubModule,
-        employees,
-        addEmployee,
-        updateEmployee,
-        viewingEmployeeId,
-        setViewingEmployeeId,
-        jobPostings,
-        onboardingPlans,
-        performanceReviews,
-        leaveRequests,
-        addLeaveRequest,
-        updateLeaveRequestStatus,
-        timeRecords,
-        schedules,
-        addSchedule,
-        updateSchedule,
-        overtimeRequests,
-        addOvertimeRequest,
-        updateOvertimeRequestStatus,
-        memos,
-        addMemo,
-        updateMemo,
-        deleteMemo,
-        biometricDevices,
-        addBiometricDevice,
-        updateBiometricDevice,
-        deleteBiometricDevice,
-        biometricLogs,
-        syncBiometricData,
-        healthCareClaims,
-        addHealthCareClaim,
-        updateHealthCareClaimStatus,
-        settings,
-        updateSettings,
+        isAuthenticated, currentUser, userRole, employees, jobPostings, onboardingPlans,
+        performanceReviews, leaveRequests, timeRecords, schedules, overtimeRequests, memos,
+        biometricDevices, biometricLogs, healthCareClaims, settings, activeModule, viewingEmployeeId, activeSubModule,
+        login, logout, setActiveModule, setViewingEmployeeId, clearSubModule, addEmployee, updateEmployee,
+        addMemo, updateMemo, deleteMemo, addLeaveRequest, updateLeaveRequest, addSchedule, addOvertimeRequest,
+        updateOvertimeRequest, addHealthCareClaim, updateHealthCareClaim, updateSettings,
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-export const useAppContext = () => {
+export const useAppContext = (): AppContextType => {
     const context = useContext(AppContext);
     if (context === undefined) {
         throw new Error('useAppContext must be used within an AppProvider');
